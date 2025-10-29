@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "claude-code": {
+      "command": "python3",
+      "args": [
+        "/Users/a1-6/mimic/claude-code-mcp/claude_code_mcp_server.py"
+      ],
+      "description": "Claude Code MCP Server - Execute Claude Code tasks asynchronously"
+    }
+  }
+}
