@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//private/tmp/claude_code_tasks/**)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

@@ -163,6 +163,30 @@ def extract_result_from_claude_output(stdout: str, stderr: str, output_format: s
     """从 Claude Code 输出中提取结果"""
     logging.debug(f"Extracting result: stdout_len={len(stdout)}, stderr_len={len(stderr)}, format={output_format}")
 
+    # 处理 stream-json 格式（修复输出丢失问题的关键）
+    if output_format == "stream-json":
+        try:
+            lines = [l for l in stdout.strip().split('\n') if l.strip()]
+            logging.debug(f"stream-json: found {len(lines)} JSONL lines")
+
+            # 查找 type="result" 的对象
+            for line in lines:
+                try:
+                    obj = json.loads(line)
+                    if obj.get('type') == 'result':
+                        result = obj.get('result', '')
+                        logging.info(f"Extracted stream-json result: {len(result)} chars")
+                        return result
+                except json.JSONDecodeError:
+                    continue
+
+            # 如果没找到 result 对象，返回所有内容
+            logging.warning("No 'result' object found in stream-json, returning raw output")
+            return stdout.strip()
+        except Exception as e:
+            logging.warning(f"stream-json parse failed: {e}, falling back to text mode")
+            return stdout.strip()
+
     if output_format == "json":
         try:
             data = json.loads(stdout.strip())
@@ -195,7 +219,7 @@ def start_claude_async(
     prompt: str,
     working_dir: str = None,
     model: str = None,
-    output_format: str = "text",
+    output_format: str = "stream-json",  # 修改默认值为 stream-json（解决输出丢失）
     skip_permissions: bool = True,
     additional_args: List[str] = None
 ) -> str:
@@ -209,8 +233,13 @@ def start_claude_async(
     # 构建命令
     cmd = ['claude', '--print', prompt]
 
+    # 设置输出格式（修复：stream-json 需要配合 --verbose）
     if output_format and output_format != "text":
         cmd.extend(['--output-format', output_format])
+        # stream-json 格式必须配合 --verbose 才能工作
+        if output_format == "stream-json":
+            cmd.append('--verbose')
+            logging.debug("Using stream-json format with --verbose flag")
 
     if model:
         cmd.extend(['--model', model])
@@ -378,7 +407,7 @@ def call_claude_sync(
     prompt: str,
     working_dir: str = None,
     model: str = None,
-    output_format: str = "text",
+    output_format: str = "stream-json",  # 修改默认值（解决输出丢失）
     skip_permissions: bool = True,
     timeout: int = None,
     additional_args: List[str] = None
@@ -386,16 +415,21 @@ def call_claude_sync(
     """同步调用 Claude Code"""
     additional_args = additional_args or []
     cmd = ['claude', '--print', prompt]
-    
+
+    # 设置输出格式（修复：stream-json 需要配合 --verbose）
     if output_format and output_format != "text":
         cmd.extend(['--output-format', output_format])
-    
+        # stream-json 格式必须配合 --verbose 才能工作
+        if output_format == "stream-json":
+            cmd.append('--verbose')
+            logging.debug("Using stream-json format with --verbose flag")
+
     if model:
         cmd.extend(['--model', model])
-    
+
     if skip_permissions:
         cmd.append('--dangerously-skip-permissions')
-    
+
     cmd.extend(additional_args)
     
     cwd = working_dir or os.getcwd()
