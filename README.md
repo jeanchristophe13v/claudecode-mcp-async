@@ -29,8 +29,8 @@ Add to your `~/.claude/settings.json`:
 {
   "mcpServers": {
     "claude-code-mcp": {
-      "command": "/absolute/path/to/claudecode-mcp-async/claudecode_mcp_async_server.py",
-      "args": [],
+      "command": "python3",
+      "args": ["/absolute/path/to/claudecode-mcp-async/claudecode_mcp_async_server.py"],
       "env": {}
     }
   }
